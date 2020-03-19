@@ -41,7 +41,7 @@ public class SftpIntegrationConfig {
     private String sftpPasword;
     @Value("${sftp.remote.directory.download:${user.home}/sftp}")
     private String sftpRemoteDirectoryDownload;
-    @Value("${sftp.local.directory.download:${java.io.tmpdir}/localDownload}")
+    @Value("${sftp.local.directory.download:${java.io.tmpdir}/inbox}")
     private String sftpLocalDirectoryDownload;
     @Value("${sftp.remote.directory.download.filter:*.*}")
     private String sftpRemoteDirectoryDownloadFilter;
