@@ -7,20 +7,15 @@ import org.springframework.integration.core.MessageSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
-import org.springframework.expression.common.LiteralExpression;
-import org.springframework.integration.annotation.Gateway;
 import org.springframework.integration.annotation.InboundChannelAdapter;
-import org.springframework.integration.annotation.MessagingGateway;
 import org.springframework.integration.annotation.Poller;
 import org.springframework.integration.annotation.ServiceActivator;
-import org.springframework.integration.file.FileNameGenerator;
 import org.springframework.integration.file.filters.AcceptOnceFileListFilter;
 import org.springframework.integration.file.remote.session.CachingSessionFactory;
 import org.springframework.integration.file.remote.session.SessionFactory;
 import org.springframework.integration.sftp.filters.SftpSimplePatternFileListFilter;
 import org.springframework.integration.sftp.inbound.SftpInboundFileSynchronizer;
 import org.springframework.integration.sftp.inbound.SftpInboundFileSynchronizingMessageSource;
-import org.springframework.integration.sftp.outbound.SftpMessageHandler;
 import org.springframework.integration.sftp.session.DefaultSftpSessionFactory;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHandler;
@@ -31,7 +26,7 @@ import org.springframework.messaging.MessageHandler;
  */
 @Configuration
 public class SftpIntegrationConfig {
-    
+
     @Value("${sftp.host}")
     private String sftpHost;
     @Value("${sftp.port:22}")
@@ -50,9 +45,8 @@ public class SftpIntegrationConfig {
     private String sftpLocalDirectoryDownload;
     @Value("${sftp.remote.directory.download.filter:*.*}")
     private String sftpRemoteDirectoryDownloadFilter;
-    @Value("${sftp.remote.directory:${user.home}/sftp}")
-    private String sftpRemoteDirectory;    
-    
+
+
     @Bean
     public SessionFactory<LsEntry> sftpSessionFactory() {
         DefaultSftpSessionFactory factory = new DefaultSftpSessionFactory(true);
@@ -68,11 +62,11 @@ public class SftpIntegrationConfig {
         factory.setAllowUnknownKeys(true);
         return new CachingSessionFactory<>(factory);
     }
-    
+
     @Bean
     public SftpInboundFileSynchronizer sftpInboundFileSynchronizer() {
-        SftpInboundFileSynchronizer fileSynchronizer = 
-                new SftpInboundFileSynchronizer(sftpSessionFactory());
+        SftpInboundFileSynchronizer fileSynchronizer
+                = new SftpInboundFileSynchronizer(sftpSessionFactory());
         fileSynchronizer.setDeleteRemoteFiles(true);
         fileSynchronizer.setRemoteDirectory(sftpRemoteDirectoryDownload);
         fileSynchronizer.setFilter(new SftpSimplePatternFileListFilter(
@@ -80,21 +74,21 @@ public class SftpIntegrationConfig {
         ));
         return fileSynchronizer;
     }
-    
+
     @Bean
     @InboundChannelAdapter(
-            channel = "fromSftpChannel", 
+            channel = "fromSftpChannel",
             poller = @Poller(cron = "0/5 * * * * *")
     )
     public MessageSource<File> sftpMessageSource() {
-        SftpInboundFileSynchronizingMessageSource source = 
-                new SftpInboundFileSynchronizingMessageSource(sftpInboundFileSynchronizer());
+        SftpInboundFileSynchronizingMessageSource source
+                = new SftpInboundFileSynchronizingMessageSource(sftpInboundFileSynchronizer());
         source.setLocalDirectory(new File(sftpLocalDirectoryDownload));
         source.setAutoCreateLocalDirectory(true);
         source.setLocalFilter(new AcceptOnceFileListFilter<>());
         return source;
     }
-    
+
     @Bean
     @ServiceActivator(inputChannel = "fromSftpChannel")
     public MessageHandler resultFileHandler() {
@@ -102,39 +96,27 @@ public class SftpIntegrationConfig {
             System.err.println(message.getPayload());
         };
     }
-    
-    @Bean
-    @ServiceActivator(inputChannel = "toSftpChannel")
-    public MessageHandler handler() {
-        SftpMessageHandler handler = new SftpMessageHandler(sftpSessionFactory());
-        handler.setRemoteDirectoryExpression(new LiteralExpression(sftpRemoteDirectory));
-        handler.setFileNameGenerator(message -> {
-            if (message.getPayload() instanceof File) {
-                return ((File) message.getPayload()).getName();
-            } else {
-                throw new IllegalArgumentException("File expected as payload.");
-            }
-        });
-        return handler;
-    }
-    
-    @MessagingGateway
-    public interface UploadGateway {
-        @Gateway(requestChannel = "toSftpChannel")
-        void upload(File file);
-    }    
-//    
+
 //    @Bean
-//    @ServiceActivator(inputChannel = "sftpChannel")
+//    @ServiceActivator(inputChannel = "toSftpChannel")
 //    public MessageHandler handler() {
-//        return new SftpOutboundGateway(sftpSessionFactory(), "ls");
+//        SftpMessageHandler handler = new SftpMessageHandler(sftpSessionFactory());
+//        handler.setRemoteDirectoryExpression(new LiteralExpression(sftpRemoteDirectory));
+//        handler.setFileNameGenerator(message -> {
+//            if (message.getPayload() instanceof File) {
+//                return ((File) message.getPayload()).getName();
+//            } else {
+//                throw new IllegalArgumentException("File expected as payload.");
+//            }
+//        });
+//        return handler;
 //    }
 //
-//    @Bean
-//    @ServiceActivator(inputChannel = "sftpChannel")
-//    public MessageHandler handler() {
-//        SftpOutboundGateway sftpOutboundGateway = new  SftpOutboundGateway(sftpSessionFactory(), "get", "payload");
-//        sftpOutboundGateway.setLocalDirectory(new File("C:/test/gateway/"));
-//        return sftpOutboundGateway;
+//    @MessagingGateway
+//    public interface UploadGateway {
+//
+//        @Gateway(requestChannel = "toSftpChannel")
+//        void upload(File file);
 //    }
+
 }
