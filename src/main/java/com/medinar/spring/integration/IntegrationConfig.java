@@ -56,7 +56,9 @@ public class IntegrationConfig {
     @Bean
     public Advice expressionAdvice(GenericEndpointSpec<FileTransferringMessageHandler<ChannelSftp.LsEntry>> c) {
         ExpressionEvaluatingRequestHandlerAdvice advice = new ExpressionEvaluatingRequestHandlerAdvice();
-        advice.setOnSuccessExpressionString("payload.delete()");
+        // https://stackoverflow.com/questions/60767867/unable-to-delete-payload-after-pushing-it-to-remote-server-using-expressionevalu
+//        advice.setOnSuccessExpressionString("payload.delete()");
+        advice.setOnSuccessExpressionString("headers[file_originalFile].delete()");
         advice.setOnFailureExpressionString("payload + ' failed to upload'");
         advice.setTrapException(true);
         return advice;
