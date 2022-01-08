@@ -1,1 +1,1 @@
-# spring-integration
+# Spring Integration
